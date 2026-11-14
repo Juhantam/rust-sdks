@@ -45,6 +45,16 @@ class AudioDeviceController {
   bool set_playout_device_by_guid(rust::String guid) const;
   bool set_recording_device_by_guid(rust::String guid) const;
 
+  // The device last selected, as a token the matching restore call accepts:
+  // empty if none was selected (the platform default is in use), "index:<n>",
+  // or "windows:<type>" for a Windows default device type.
+  rust::String playout_device_selection() const;
+  rust::String recording_device_selection() const;
+  // Selects the device a token from *_device_selection() names. An empty token
+  // selects the platform default.
+  bool restore_playout_device_selection(rust::String selection) const;
+  bool restore_recording_device_selection(rust::String selection) const;
+
   // Recording control
   bool stop_recording() const;
   bool init_recording() const;

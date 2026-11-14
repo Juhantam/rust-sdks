@@ -16,10 +16,71 @@
 
 #include "livekit/audio_device_controller.h"
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace livekit_ffi {
+
+namespace {
+
+using WindowsDeviceType = webrtc::AudioDeviceModule::WindowsDeviceType;
+
+rust::String EncodeDeviceSelection(
+    const std::optional<AdmProxy::DeviceSelection>& selection) {
+  if (!selection.has_value()) {
+    return rust::String();
+  }
+  if (const auto* index = std::get_if<uint16_t>(&*selection)) {
+    return rust::String("index:" + std::to_string(*index));
+  }
+  return rust::String(
+      "windows:" +
+      std::to_string(static_cast<int>(std::get<WindowsDeviceType>(*selection))));
+}
+
+// Parses the number following `prefix` in `token`.
+std::optional<int> ParseSelectionNumber(const std::string& token,
+                                        const std::string& prefix) {
+  if (token.rfind(prefix, 0) != 0) {
+    return std::nullopt;
+  }
+  try {
+    size_t pos = 0;
+    int value = std::stoi(token.substr(prefix.size()), &pos);
+    if (pos == token.size() - prefix.size()) {
+      return value;
+    }
+  } catch (...) {}
+  return std::nullopt;
+}
+
+template <typename SetByIndex, typename SetByType>
+bool RestoreDeviceSelection(const std::string& token,
+                            SetByIndex set_by_index,
+                            SetByType set_by_type) {
+  if (token.empty()) {
+#if defined(WEBRTC_WIN)
+    // WebRTC's Windows ADM uses the default communication device until a
+    // device is selected.
+    return set_by_type(webrtc::AudioDeviceModule::kDefaultCommunicationDevice) == 0;
+#else
+    return set_by_index(0) == 0;
+#endif
+  }
+  if (auto index = ParseSelectionNumber(token, "index:");
+      index && *index >= 0 && *index <= UINT16_MAX) {
+    return set_by_index(static_cast<uint16_t>(*index)) == 0;
+  }
+  if (auto type = ParseSelectionNumber(token, "windows:")) {
+    return set_by_type(static_cast<WindowsDeviceType>(*type)) == 0;
+  }
+  return false;
+}
+
+}  // namespace
 
 AudioDeviceController::AudioDeviceController(
     std::shared_ptr<RtcRuntime> rtc_runtime,
@@ -184,6 +245,30 @@ bool AudioDeviceController::set_recording_device_by_guid(rust::String guid) cons
 #endif
 
   return false;
+}
+
+rust::String AudioDeviceController::playout_device_selection() const {
+  return EncodeDeviceSelection(adm_proxy_->SelectedPlayoutDevice());
+}
+
+rust::String AudioDeviceController::recording_device_selection() const {
+  return EncodeDeviceSelection(adm_proxy_->SelectedRecordingDevice());
+}
+
+bool AudioDeviceController::restore_playout_device_selection(
+    rust::String selection) const {
+  return RestoreDeviceSelection(
+      std::string(selection.c_str()),
+      [this](uint16_t index) { return adm_proxy_->SetPlayoutDevice(index); },
+      [this](WindowsDeviceType type) { return adm_proxy_->SetPlayoutDevice(type); });
+}
+
+bool AudioDeviceController::restore_recording_device_selection(
+    rust::String selection) const {
+  return RestoreDeviceSelection(
+      std::string(selection.c_str()),
+      [this](uint16_t index) { return adm_proxy_->SetRecordingDevice(index); },
+      [this](WindowsDeviceType type) { return adm_proxy_->SetRecordingDevice(type); });
 }
 
 bool AudioDeviceController::stop_recording() const {

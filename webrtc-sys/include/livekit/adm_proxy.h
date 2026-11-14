@@ -167,6 +167,14 @@ class AdmProxy : public webrtc::AudioDeviceModule {
   int32_t SetRecordingDevice(uint16_t index) override;
   int32_t SetRecordingDevice(WindowsDeviceType device) override;
 
+  /// A device selection: a numeric index or a Windows default device type.
+  using DeviceSelection = std::variant<uint16_t, WindowsDeviceType>;
+
+  /// Returns the device last selected for playout or recording, or nothing
+  /// if none was selected and the platform default is in use.
+  std::optional<DeviceSelection> SelectedPlayoutDevice() const;
+  std::optional<DeviceSelection> SelectedRecordingDevice() const;
+
   int32_t PlayoutIsAvailable(bool* available) override;
   int32_t InitPlayout() override;
   bool PlayoutIsInitialized() const override;
@@ -314,7 +322,6 @@ class AdmProxy : public webrtc::AudioDeviceModule {
   // numeric index or a Windows default device type, matching the two
   // SetPlayoutDevice/SetRecordingDevice overloads, so an explicit index 0
   // and a Windows default device type both survive the replay.
-  using DeviceSelection = std::variant<uint16_t, WindowsDeviceType>;
   std::optional<DeviceSelection> selected_playout_device_
       RTC_GUARDED_BY(worker_thread_);
   std::optional<DeviceSelection> selected_recording_device_

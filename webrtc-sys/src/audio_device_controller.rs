@@ -39,6 +39,17 @@ pub mod ffi {
         fn set_playout_device_by_guid(self: &AudioDeviceController, guid: String) -> bool;
         fn set_recording_device_by_guid(self: &AudioDeviceController, guid: String) -> bool;
 
+        fn playout_device_selection(self: &AudioDeviceController) -> String;
+        fn recording_device_selection(self: &AudioDeviceController) -> String;
+        fn restore_playout_device_selection(
+            self: &AudioDeviceController,
+            selection: String,
+        ) -> bool;
+        fn restore_recording_device_selection(
+            self: &AudioDeviceController,
+            selection: String,
+        ) -> bool;
+
         fn stop_recording(self: &AudioDeviceController) -> bool;
         fn init_recording(self: &AudioDeviceController) -> bool;
         fn start_recording(self: &AudioDeviceController) -> bool;
@@ -117,5 +128,22 @@ mod tests {
 
         assert!(audio.platform_adm_ref_count() >= 0);
         let _ = audio.is_platform_adm_active();
+    }
+
+    #[test]
+    fn test_device_selection_round_trip() {
+        let _guard = TEST_MUTEX.lock().expect("test mutex poisoned");
+        let factory = create_peer_connection_factory();
+        let audio = factory.audio_device();
+
+        assert!(audio.restore_recording_device_selection(String::new()));
+        let platform_default = if cfg!(windows) { "windows:-1" } else { "index:0" };
+        assert_eq!(audio.recording_device_selection(), platform_default);
+
+        assert!(audio.restore_playout_device_selection("index:0".to_string()));
+        assert_eq!(audio.playout_device_selection(), "index:0");
+
+        assert!(!audio.restore_recording_device_selection("not a selection".to_string()));
+        assert_eq!(audio.recording_device_selection(), platform_default);
     }
 }

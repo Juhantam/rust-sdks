@@ -454,6 +454,20 @@ int32_t AdmProxy::SetRecordingDevice(WindowsDeviceType device) {
   });
 }
 
+std::optional<AdmProxy::DeviceSelection> AdmProxy::SelectedPlayoutDevice() const {
+  return RunOnWorker([this] {
+    RTC_DCHECK_RUN_ON(worker_thread_);
+    return selected_playout_device_;
+  });
+}
+
+std::optional<AdmProxy::DeviceSelection> AdmProxy::SelectedRecordingDevice() const {
+  return RunOnWorker([this] {
+    RTC_DCHECK_RUN_ON(worker_thread_);
+    return selected_recording_device_;
+  });
+}
+
 int32_t AdmProxy::PlayoutIsAvailable(bool* available) {
   return RunOnWorker([this, available] {
     RTC_DCHECK_RUN_ON(worker_thread_);

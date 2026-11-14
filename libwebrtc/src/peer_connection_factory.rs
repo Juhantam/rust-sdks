@@ -244,6 +244,12 @@ pub mod native {
         /// Device selection by GUID (preferred - stable across device changes)
         fn set_playout_device_by_guid(&self, guid: &str) -> bool;
         fn set_recording_device_by_guid(&self, guid: &str) -> bool;
+        /// The device last selected, as a token the matching restore call accepts.
+        /// Empty if none was selected and the platform default is in use.
+        fn playout_device_selection(&self) -> String;
+        fn recording_device_selection(&self) -> String;
+        fn restore_playout_device_selection(&self, selection: &str) -> bool;
+        fn restore_recording_device_selection(&self, selection: &str) -> bool;
 
         // Recording control (for device switching while active)
         fn stop_recording(&self) -> bool;
@@ -339,6 +345,22 @@ pub mod native {
 
         fn set_recording_device_by_guid(&self, guid: &str) -> bool {
             self.handle.set_recording_device_by_guid(guid)
+        }
+
+        fn playout_device_selection(&self) -> String {
+            self.handle.playout_device_selection()
+        }
+
+        fn recording_device_selection(&self) -> String {
+            self.handle.recording_device_selection()
+        }
+
+        fn restore_playout_device_selection(&self, selection: &str) -> bool {
+            self.handle.restore_playout_device_selection(selection)
+        }
+
+        fn restore_recording_device_selection(&self, selection: &str) -> bool {
+            self.handle.restore_recording_device_selection(selection)
         }
 
         fn stop_recording(&self) -> bool {
