@@ -395,6 +395,12 @@ async fn test_platform_audio_device_selection_by_index() -> Result<()> {
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    if let Some(device) = playout_devices.first() {
+        use livekit::PlayoutDeviceId;
+        audio.switch_playout_device(&PlayoutDeviceId::from_index(device.index))?;
+    }
+
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         let out_of_bounds_index = usize::MAX / 2;
         assert_eq!(

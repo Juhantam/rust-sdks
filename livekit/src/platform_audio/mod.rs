@@ -980,8 +980,11 @@ impl PlatformAudio {
     ///
     /// [`set_playout_device`]: Self::set_playout_device
     pub fn switch_playout_device(&self, id: &PlayoutDeviceId) -> AudioResult<()> {
+        // Accept both a listed ID and an index-based ID (`PlayoutDeviceId::from_index`)
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
-        Self::ensure_device_exists(self.playout_devices(), |device| &device.id == id)?;
+        Self::ensure_device_exists(self.playout_devices(), |device| {
+            &device.id == id || PlayoutDeviceId::from_index(device.index) == *id
+        })?;
 
         let runtime = &self.handle.runtime;
         let was_initialized = runtime.playout_is_initialized();
