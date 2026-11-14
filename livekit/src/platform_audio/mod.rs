@@ -1446,6 +1446,31 @@ impl device_switch::DeviceSwitchSteps for PlayoutSwitch<'_> {
 mod tests {
     use super::*;
 
+    /// Device switching rolls back to the remembered selection, so it must name
+    /// the device that was accepted, by an identity that survives hot-plug.
+    #[test_log::test(tokio::test)]
+    #[serial_test::serial]
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    async fn remembers_the_accepted_recording_device_by_identity() {
+        reset_platform_audio();
+        let Ok(audio) = PlatformAudio::new() else {
+            return;
+        };
+        let Some(device) = audio.recording_devices().next() else {
+            return;
+        };
+        let runtime = &audio.handle.runtime;
+
+        assert!(runtime.set_recording_device(device.index as u16));
+        assert_eq!(runtime.recording_device_selection(), device.id.as_str());
+
+        assert!(!runtime.set_recording_device_by_guid("__livekit_missing_recording_device__"));
+        assert_eq!(runtime.recording_device_selection(), device.id.as_str());
+
+        assert!(runtime.restore_recording_device_selection(device.id.as_str()));
+        assert_eq!(runtime.recording_device_selection(), device.id.as_str());
+    }
+
     #[test]
     fn rtc_audio_source_device_variant() {
         let source = RtcAudioSource::Device;

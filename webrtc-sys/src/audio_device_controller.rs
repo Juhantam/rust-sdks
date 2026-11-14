@@ -137,13 +137,17 @@ mod tests {
         let audio = factory.audio_device();
 
         assert!(audio.restore_recording_device_selection(String::new()));
-        let platform_default = if cfg!(windows) { "windows:-1" } else { "index:0" };
-        assert_eq!(audio.recording_device_selection(), platform_default);
+        assert_eq!(audio.recording_device_selection(), "");
 
-        assert!(audio.restore_playout_device_selection("index:0".to_string()));
-        assert_eq!(audio.playout_device_selection(), "index:0");
+        assert!(!audio.set_recording_device_by_guid("__livekit_missing_device__".to_string()));
+        assert_eq!(audio.recording_device_selection(), "");
 
-        assert!(!audio.restore_recording_device_selection("not a selection".to_string()));
-        assert_eq!(audio.recording_device_selection(), platform_default);
+        assert!(!audio.restore_recording_device_selection("windows:x".to_string()));
+        assert_eq!(audio.recording_device_selection(), "");
+
+        if cfg!(windows) {
+            assert!(audio.restore_playout_device_selection("windows:-1".to_string()));
+            assert_eq!(audio.playout_device_selection(), "windows:-1");
+        }
     }
 }
